@@ -120,12 +120,13 @@ function fetchData(url) {
   return content;
 }
 
-function getFields(request, content) {
+function getFields(request, content, forIds) {
   var communityConnector = DataStudioApp.createCommunityConnector();
   var fields = communityConnector.getFields();
   var types = communityConnector.FieldType;
   var textQualifier = request.configParams.textQualifier;
   var containsHeader = request.configParams.containsHeader;
+  var filterIds = forIds || [];
 
   var lineSeparator = findLineSeparator(content);
   var firstLineContent;
@@ -146,6 +147,10 @@ function getFields(request, content) {
 
   var i = 1;
   firstLineColumns.forEach(function(value) {
+    if (filterIds.length > 0 && filterIds.indexOf(value.replace(/\s/g, '_').toLowerCase()) < 0) {
+      return;
+    }
+    
     var field = fields.newDimension().setType(types.TEXT);
     if (containsHeader === 'true') {
       // because Id can't have space
@@ -172,8 +177,18 @@ function getData(request) {
     return field.name;
   });
   var fields = getFields(request, content);
-  var requestedFields = fields.forIds(requestedFieldIds);
+  // BUG: the forIds() call occasionally reorders the fields resulting in jumbled column reads
+  // Workaround with a modified getFields() call to filter field results
+  // var requestedFields = fields.forIds(requestedFieldIds);
+  var requestedFields = getFields(request, content, requestedFieldIds);
   var buildedFields = fields.build();
+
+  // DEBUG
+  // requestedFields
+  // .asArray()
+  // .map(function(field, index) {
+  //    Logger.log("Field[" +index + "] " + field.getId() + " name " + field.getName() + " type " + field.getType());
+  // });
 
   var requestedFieldsIndex = buildedFields.reduce(function(
     filtered,
