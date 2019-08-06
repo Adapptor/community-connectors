@@ -147,19 +147,21 @@ function getFields(request, content, forIds) {
 
   var i = 1;
   firstLineColumns.forEach(function(value) {
-    if (filterIds.length > 0 && filterIds.indexOf(value.replace(/\s/g, '_').toLowerCase()) < 0) {
+    // because Id can't have space
+    var newId = (containsHeader === 'true') ? value.replace(/\s/g, '_').toLowerCase()
+                                            : 'column_' + (i++);
+
+    if (filterIds.length > 0 && filterIds.indexOf(newId) < 0) {
       return;
     }
     
     var field = fields.newDimension().setType(types.TEXT);
+
+    field.setId(newId);
+
     if (containsHeader === 'true') {
-      // because Id can't have space
-      field.setId(value.replace(/\s/g, '_').toLowerCase());
       field.setName(value);
-    } else {
-      field.setId('column_' + i);
-      i++;
-    }
+    } 
   });
 
   return fields;
